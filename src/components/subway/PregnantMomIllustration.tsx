@@ -6,7 +6,7 @@ export type CharacterMood = 'idle' | 'correct' | 'wrong' | 'seated';
 interface PregnantMomIllustrationProps {
   mood: CharacterMood;
   name: string;
-  badgeStyle: 'pink_heart' | 'bear' | 'star';
+  badgeStyle: 'pink_heart' | 'dino_egg' | 'watermelon';
   tiltAngle: number;
 }
 
@@ -280,16 +280,27 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
           <circle cx="12" cy="12" r="12" fill="#FFFFFF" stroke="#FB6F92" strokeWidth="1.5" />
           {badgeStyle === 'pink_heart' ? (
             <path d="M 12 7 C 9 4, 5 7, 7 11 L 12 16 L 17 11 C 19 7, 15 4, 12 7 Z" fill="#FB6F92" />
-          ) : badgeStyle === 'bear' ? (
-            <g transform="translate(6, 6) scale(0.6)">
-              <circle cx="6" cy="6" r="3" fill="#B45309" />
-              <circle cx="14" cy="6" r="3" fill="#B45309" />
-              <circle cx="10" cy="10" r="7" fill="#D97706" />
-              <circle cx="8" cy="9" r="1" fill="#000" />
-              <circle cx="12" cy="9" r="1" fill="#000" />
+          ) : badgeStyle === 'dino_egg' ? (
+            /* Goofy Dinosaur Egg Badge */
+            <g transform="translate(4, 3)">
+              <ellipse cx="8" cy="9" rx="6.5" ry="8" fill="#10B981" />
+              {/* Egg crack & spots */}
+              <circle cx="6" cy="6" r="1.5" fill="#047857" />
+              <circle cx="10" cy="11" r="1.2" fill="#047857" />
+              <path d="M 4 9 L 7 10 L 9 8 L 12 10" stroke="#FFFFFF" strokeWidth="1.2" fill="none" />
+              {/* Peek eyes */}
+              <circle cx="7" cy="8" r="0.8" fill="#000000" />
             </g>
           ) : (
-            <polygon points="12,5 14,9 19,10 15,13 16,18 12,15 8,18 9,13 5,10 10,9" fill="#F59E0B" />
+            /* Goofy Watermelon Slice Badge */
+            <g transform="translate(4, 4)">
+              <path d="M 2 7 A 6 6 0 0 0 14 7 Z" fill="#EF4444" />
+              <path d="M 1 7 A 7 7 0 0 0 15 7" stroke="#10B981" strokeWidth="1.8" fill="none" />
+              {/* Seeds */}
+              <circle cx="5" cy="8" r="0.7" fill="#000000" />
+              <circle cx="8" cy="9" r="0.7" fill="#000000" />
+              <circle cx="11" cy="8" r="0.7" fill="#000000" />
+            </g>
           )}
         </g>
 

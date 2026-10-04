@@ -1,5 +1,10 @@
 export type NavigationTab = 'subway' | 'video' | 'game' | 'report' | 'certificate';
 
+export interface StageProps {
+  onComplete: (score: number) => void;
+  onUpdateStats: (energyDelta: number, fatigueDelta: number, empathyDelta: number) => void;
+}
+
 export interface GameState {
   currentStage: number; // 1 to 5
   totalScore: number;

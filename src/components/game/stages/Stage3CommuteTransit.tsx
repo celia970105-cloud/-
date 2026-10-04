@@ -23,9 +23,6 @@ export const Stage3CommuteTransit: React.FC<StageProps> = ({ onComplete, onUpdat
       const sway = (Math.random() - 0.5) * 16;
       setBalance((b) => {
         const next = Math.max(5, Math.min(95, b + sway));
-        if (next < 20 || next > 80) {
-          playKawaiiOuch();
-        }
         return next;
       });
     }, 400);

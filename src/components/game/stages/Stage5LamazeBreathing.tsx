@@ -1,13 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
-import confetti from 'canvas-confetti';
-import { playRhythmHit, playSuccessChime, playHeartbeat, playKawaiiOuch } from '../../../utils/audio';
-import { RotateCcw, Heart, Sparkles, CheckCircle2 } from 'lucide-react';
-
-interface StageProps {
-  onComplete: (score: number) => void;
-  onUpdateStats: (energyDelta: number, fatigueDelta: number, empathyDelta: number) => void;
-}
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { StageProps } from '../../../types/pregnancy';
+import { playRhythmHit, playKawaiiOuch, playSuccessChime, playKawaiiPop } from '../../../utils/audio';
+import { Sparkles, RotateCcw, Heart, CheckCircle2, Zap, Target } from 'lucide-react';
 
 interface RhythmNote {
   id: number;
@@ -21,14 +16,25 @@ export const Stage5LamazeBreathing: React.FC<StageProps> = ({ onComplete, onUpda
   const [notes, setNotes] = useState<RhythmNote[]>([]);
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
+  const [maxCombo, setMaxCombo] = useState(0);
   const [hitFeedback, setHitFeedback] = useState<string | null>(null);
-  const [calmMeter, setCalmMeter] = useState(30);
+  const [calmMeter, setCalmMeter] = useState(15);
   const [isWon, setIsWon] = useState(false);
+  const [finalScore, setFinalScore] = useState(0);
+  const [accuracyPct, setAccuracyPct] = useState(0);
+
+  // Statistics tracker to prevent easy 100 full marks
+  const statsRef = useRef({
+    perfectHits: 0,
+    greatHits: 0,
+    missHits: 0,
+    totalHits: 0
+  });
 
   // Target hit zone is at 80%
   const TARGET_ZONE = 80;
 
-  // Spawn rhythm notes periodically
+  // Spawn rhythm notes periodically (every 850ms)
   useEffect(() => {
     if (isWon) return;
     const interval = setInterval(() => {
@@ -50,7 +56,7 @@ export const Stage5LamazeBreathing: React.FC<StageProps> = ({ onComplete, onUpda
           position: 0
         }
       ]);
-    }, 1400);
+    }, 850);
 
     return () => clearInterval(interval);
   }, [isWon]);
@@ -62,10 +68,12 @@ export const Stage5LamazeBreathing: React.FC<StageProps> = ({ onComplete, onUpda
       setNotes((prev) => {
         const next: RhythmNote[] = [];
         for (const n of prev) {
-          const nextPos = n.position + 2.5;
+          const nextPos = n.position + 3.2;
           if (nextPos > 105) {
-            // Note missed
+            // Note missed automatically
+            statsRef.current.missHits += 1;
             setCombo(0);
+            setCalmMeter((c) => Math.max(5, c - 6));
             continue;
           }
           next.push({ ...n, position: nextPos });
@@ -80,216 +88,270 @@ export const Stage5LamazeBreathing: React.FC<StageProps> = ({ onComplete, onUpda
   const handleDrumTap = () => {
     if (isWon) return;
 
-    // Find closest note near TARGET_ZONE (e.g. 70% to 90%)
-    const hitIndex = notes.findIndex((n) => Math.abs(n.position - TARGET_ZONE) <= 12);
+    // Find closest note near TARGET_ZONE (Tighter window ±8 for calibrated difficulty)
+    const hitIndex = notes.findIndex((n) => Math.abs(n.position - TARGET_ZONE) <= 8);
 
     if (hitIndex !== -1) {
       const note = notes[hitIndex];
       const dist = Math.abs(note.position - TARGET_ZONE);
 
       let rating = 'PERFECT!';
-      let scoreAdd = 100;
-      if (dist > 6) {
+      let scoreAdd = 80;
+      let calmAdd = 7;
+
+      if (dist <= 3.8) {
+        // Strict Perfect
+        statsRef.current.perfectHits += 1;
+        rating = 'PERFECT!';
+        scoreAdd = 80;
+        calmAdd = 7;
+      } else {
+        // Great
+        statsRef.current.greatHits += 1;
         rating = 'GREAT!';
-        scoreAdd = 60;
+        scoreAdd = 45;
+        calmAdd = 4;
       }
 
-      playRhythmHit(dist <= 6);
+      statsRef.current.totalHits += 1;
+      playRhythmHit(dist <= 3.8);
+
       setScore((s) => s + scoreAdd);
-      setCombo((c) => c + 1);
+      setCombo((c) => {
+        const nextC = c + 1;
+        setMaxCombo((m) => Math.max(m, nextC));
+        return nextC;
+      });
       setHitFeedback(rating);
 
-      const nextCalm = Math.min(100, calmMeter + 10);
+      const nextCalm = Math.min(100, calmMeter + calmAdd);
       setCalmMeter(nextCalm);
-      onUpdateStats(5, -4, 8);
+      onUpdateStats(4, -3, 6);
 
       // Remove hit note
       setNotes((prev) => prev.filter((_, idx) => idx !== hitIndex));
 
+      // Reaching 100 calm triggers completion with strictly calculated accuracy score
       if (nextCalm >= 100) {
-        triggerWin();
+        evaluateWin();
       }
     } else {
-      // Miss tap
+      // Miss tap penalty
       playKawaiiOuch();
+      statsRef.current.missHits += 1;
       setCombo(0);
+      setScore((s) => Math.max(0, s - 25));
+      setCalmMeter((c) => Math.max(5, c - 8));
       setHitFeedback('MISS!');
     }
 
     setTimeout(() => {
       setHitFeedback(null);
-    }, 500);
+    }, 380);
   };
 
-  const triggerWin = () => {
+  // Rigorous scoring: avoids giving easy 100 marks
+  const evaluateWin = () => {
     setIsWon(true);
     playSuccessChime();
-    confetti({
-      particleCount: 150,
-      spread: 80,
-      origin: { y: 0.6 }
-    });
-    onComplete(99);
+
+    const { perfectHits, greatHits, missHits } = statsRef.current;
+    const total = perfectHits + greatHits + missHits;
+    const accuracy = total > 0 ? Math.round(((perfectHits * 1.0 + greatHits * 0.6) / total) * 100) : 70;
+    setAccuracyPct(accuracy);
+
+    // Realistic nursing score: 100 requires 0 misses and >90% perfects!
+    let computedScore = Math.round(accuracy * 0.88 + (maxCombo >= 10 ? 8 : maxCombo >= 5 ? 4 : 0));
+    if (missHits > 0 && computedScore >= 98) {
+      computedScore = 93; // Cap if there were misses
+    }
+    const finalVal = Math.min(99, Math.max(68, computedScore));
+    setFinalScore(finalVal);
+    onComplete(finalVal);
   };
 
   const handleReset = () => {
+    statsRef.current = { perfectHits: 0, greatHits: 0, missHits: 0, totalHits: 0 };
     setNotes([]);
     setScore(0);
     setCombo(0);
-    setCalmMeter(30);
-    setHitFeedback(null);
+    setMaxCombo(0);
+    setCalmMeter(15);
     setIsWon(false);
+    setHitFeedback(null);
   };
 
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-rose-50/80 border-2 border-rose-200 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+      <div className="bg-pink-50/80 border-2 border-pink-200 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-white border-2 border-rose-300 flex items-center justify-center text-2xl shadow-xs shrink-0">
+          <div className="w-12 h-12 rounded-2xl bg-white border-2 border-pink-300 flex items-center justify-center text-2xl shadow-xs shrink-0">
             🥁
           </div>
           <div>
-            <div className="inline-block bg-rose-200 text-rose-800 text-[11px] font-bold px-2 py-0.5 rounded-full mb-0.5">
-              STAGE 05 · 產前陣痛音樂節奏
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block bg-pink-600 text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs">
+                STAGE 02 · 拉梅茲急速音遊
+              </span>
+              <span className="inline-flex items-center gap-0.5 bg-rose-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
+                <Target className="w-3 h-3" /> 嚴格節奏評分 · 難拿滿分
+              </span>
             </div>
-            <h3 className="text-lg font-bold text-stone-900 font-serif-tc">
-              陣痛來啦！拉梅茲節奏打擊音遊
-            </h3>
-            <p className="text-xs text-stone-500">
-              宮縮波浪來襲！當呼吸音符滑入右側【紅色同心圓】時，迅速點擊下方大愛心節奏鼓！
-            </p>
+            <h2 className="text-lg font-black text-stone-900 font-serif-tc mt-0.5">
+              精準擊打判定線，錯拍扣平靜度，真實計算節奏分！
+            </h2>
           </div>
         </div>
 
-        {/* Meters */}
-        <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-rose-200">
-          <div className="text-center">
-            <span className="text-[10px] text-stone-400 block font-bold">連擊 COMBO</span>
-            <span className="text-lg font-black text-rose-600 font-mono">
-              {combo} 連打
-            </span>
+        {/* Calm Meter & Combo */}
+        <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-pink-200 shadow-xs">
+          <div>
+            <span className="text-[10px] font-bold text-stone-400 block">放鬆平靜度 (累積至 100%)</span>
+            <div className="w-24 h-3 bg-stone-100 rounded-full overflow-hidden border border-stone-200 mt-0.5">
+              <div
+                className="h-full bg-pink-500 transition-all duration-150"
+                style={{ width: `${calmMeter}%` }}
+              />
+            </div>
           </div>
-          <div className="h-8 w-px bg-rose-100" />
-          <div className="text-center">
-            <span className="text-[10px] text-stone-400 block font-bold">平靜催產素</span>
-            <span className="text-lg font-black text-emerald-600 font-mono">
-              {calmMeter}%
+          <div className="h-7 w-px bg-pink-200" />
+          <div className="text-center min-w-[55px]">
+            <span className="text-[10px] font-bold text-stone-400 block">COMBO</span>
+            <span className="text-base font-black text-pink-700 font-mono">
+              {combo} ✕
             </span>
           </div>
         </div>
       </div>
 
-      {/* Rhythm Track Canvas */}
-      <div className="bg-gradient-to-r from-rose-900 via-pink-900 to-rose-950 text-white rounded-3xl border-3 border-rose-300 p-6 flex flex-col items-center justify-between min-h-[420px] shadow-sm relative overflow-hidden select-none">
-        {/* Rating Floating Text */}
-        {hitFeedback && (
-          <motion.div
-            initial={{ scale: 0.5, y: 0 }}
-            animate={{ scale: 1.3, y: -20 }}
-            className={`absolute top-10 font-black text-2xl z-30 drop-shadow-md ${
-              hitFeedback === 'PERFECT!'
-                ? 'text-amber-300'
-                : hitFeedback === 'GREAT!'
-                ? 'text-emerald-300'
-                : 'text-rose-400'
-            }`}
-          >
-            {hitFeedback}
-          </motion.div>
-        )}
-
-        {/* Baby ready announcement */}
-        <div className="w-full flex items-center justify-between text-xs text-pink-200 font-mono pb-2 border-b border-rose-700/60 mb-2">
-          <span>👶 胎心率 140 bpm · 宮縮波浪推進中</span>
-          <span className="text-amber-300 font-bold">SCORE: {score}</span>
-        </div>
-
-        {/* Rhythm Track Lane */}
-        <div className="w-full h-28 bg-stone-900/70 rounded-2xl border-2 border-rose-400/50 relative overflow-hidden flex items-center my-4 shadow-inner">
-          {/* Track line */}
-          <div className="absolute top-1/2 left-0 right-0 h-1 bg-rose-500/30 -translate-y-1/2" />
-
-          {/* TARGET HIT ZONE at 80% */}
+      {/* Rhythm Track Highway */}
+      <div className="relative h-60 sm:h-68 bg-gradient-to-r from-stone-900 via-stone-850 to-pink-950 rounded-3xl border-3 border-pink-300 overflow-hidden shadow-inner p-4 flex flex-col justify-between select-none">
+        {/* Track Line */}
+        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-16 bg-white/5 border-y border-pink-500/20 flex items-center">
+          {/* Target Judgement Ring Zone at 80% */}
           <div
             style={{ left: `${TARGET_ZONE}%` }}
-            className="absolute top-0 bottom-0 w-16 -ml-8 border-4 border-rose-400 bg-rose-500/30 rounded-2xl flex flex-col items-center justify-center animate-pulse z-10"
+            className="absolute -translate-x-1/2 w-16 h-16 rounded-full border-4 border-pink-400/90 bg-pink-500/20 shadow-[0_0_20px_rgba(251,111,146,0.6)] flex items-center justify-center animate-pulse"
           >
-            <span className="text-[10px] font-black text-rose-200">HIT!</span>
+            <div className="w-8 h-8 rounded-full border-2 border-white/60" />
+            <span className="absolute -bottom-6 text-[10px] font-black text-pink-300">
+              判定線
+            </span>
           </div>
 
-          {/* Moving Notes */}
+          {/* Flying Notes */}
           {notes.map((note) => (
             <div
               key={note.id}
-              style={{
-                left: `${note.position}%`,
-                transform: 'translate(-50%, -50%)'
-              }}
-              className="absolute top-1/2 flex flex-col items-center pointer-events-none transition-transform"
+              style={{ left: `${note.position}%` }}
+              className="absolute -translate-x-1/2 flex flex-col items-center pointer-events-none transition-transform"
             >
-              <div className="w-12 h-12 rounded-full bg-white text-stone-900 border-2 border-pink-400 shadow-md flex items-center justify-center text-2xl">
+              <div
+                className={`w-12 h-12 rounded-full border-2 flex items-center justify-center text-xl shadow-lg ${
+                  note.type === 'inhale'
+                    ? 'bg-sky-500 border-sky-200 text-white'
+                    : note.type === 'exhale'
+                    ? 'bg-emerald-500 border-emerald-200 text-white'
+                    : 'bg-rose-500 border-rose-200 text-white animate-spin'
+                }`}
+              >
                 {note.emoji}
               </div>
-              <span className="text-[10px] font-bold text-white bg-rose-700/80 px-1.5 rounded-full mt-1">
+              <span className="text-[10px] font-black text-white bg-black/60 px-1.5 rounded-full mt-0.5">
                 {note.text}
               </span>
             </div>
           ))}
         </div>
 
-        {/* Big Kawaii Rhythm Drum Button */}
-        <div className="flex flex-col items-center my-2">
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={handleDrumTap}
-            disabled={isWon}
-            className={`w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 shadow-2xl flex flex-col items-center justify-center gap-1 cursor-pointer transition-all active:ring-8 ${
-              isWon
-                ? 'bg-emerald-500 border-emerald-300 text-white'
-                : 'bg-gradient-to-tr from-rose-500 to-pink-400 border-white text-white hover:brightness-110 active:ring-rose-300'
-            }`}
-          >
-            <Heart className="w-10 h-10 fill-current animate-pulse" />
-            <span className="text-sm font-black tracking-wider">
-              {isWon ? '誕生啦！' : '打擊節奏！'}
-            </span>
-          </motion.button>
-          <span className="text-[11px] text-pink-200 mt-2">
-            音符進入方框時，用力點擊大愛心！
-          </span>
+        {/* Feedback text */}
+        <div className="relative z-10 flex justify-between items-start text-xs font-bold text-white/80">
+          <div>
+            <span>得分：</span>
+            <span className="font-mono text-pink-400 text-base font-black ml-1">{score}</span>
+          </div>
+
+          <AnimatePresence>
+            {hitFeedback && (
+              <motion.div
+                initial={{ scale: 0.5, y: -5 }}
+                animate={{ scale: 1.2, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`text-lg font-black tracking-wider ${
+                  hitFeedback === 'PERFECT!'
+                    ? 'text-amber-300 drop-shadow-[0_0_8px_rgba(252,211,77,0.8)]'
+                    : hitFeedback === 'GREAT!'
+                    ? 'text-emerald-400'
+                    : 'text-rose-400'
+                }`}
+              >
+                {hitFeedback}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="text-stone-400">
+            平靜度：{calmMeter}%
+          </div>
         </div>
 
-        {/* Win Banner */}
-        {isWon && (
-          <div className="absolute inset-0 bg-rose-950/85 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center z-40 animate-in fade-in">
-            <div className="text-6xl mb-2 animate-bounce">👶🎉</div>
-            <h4 className="text-3xl font-black text-amber-300 font-serif-tc mb-1">
-              哇！寶寶平安出生啦！
-            </h4>
-            <p className="text-sm text-pink-100 max-w-md mb-4">
-              你用完美的拉梅茲呼吸節奏，成功抵禦了陣痛波峰！全體通關！
-            </p>
-            <button
-              onClick={handleReset}
-              className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 text-white rounded-full font-bold text-xs shadow-lg cursor-pointer"
-            >
-              再打擊一次音遊
-            </button>
-          </div>
-        )}
-
-        {/* Reset button */}
-        <div className="w-full flex justify-end">
+        {/* Big Interactive Tap Button (Drum Pad) */}
+        <div className="relative z-10 flex justify-center pb-2">
           <button
-            onClick={handleReset}
-            className="text-xs text-pink-300 hover:text-white flex items-center gap-1 cursor-pointer"
+            onClick={handleDrumTap}
+            className="w-full sm:w-80 py-4 bg-gradient-to-r from-pink-500 via-rose-500 to-pink-600 hover:from-pink-600 hover:to-rose-600 active:scale-95 text-white rounded-2xl font-black text-base shadow-xl border-2 border-pink-300 cursor-pointer transition-all flex items-center justify-center gap-2"
           >
-            <RotateCcw className="w-3 h-3" />
-            <span>重新打擊</span>
+            <span>🥁 點擊敲擊呼吸鼓！(SPACE / 點擊)</span>
           </button>
         </div>
+
+        {/* Win Modal Overlay with Strict Real Evaluated Score */}
+        {isWon && (
+          <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-xl border-2 border-emerald-300">
+              <div className="text-5xl">🎶✨</div>
+              <h3 className="text-xl font-black text-stone-900 font-serif-tc">
+                挑戰完成！平靜度達標！
+              </h3>
+              <div className="p-3 bg-pink-50 rounded-2xl border border-pink-200 space-y-1">
+                <div className="text-xs text-stone-500 font-bold">嚴格結算成績</div>
+                <div className="text-2xl font-black text-pink-700 font-mono">
+                  {finalScore} 分
+                </div>
+                <div className="text-[11px] text-stone-600">
+                  節奏精準度：{accuracyPct}% · 最高連擊：{maxCombo} ✕
+                </div>
+              </div>
+              <p className="text-xs text-stone-600 leading-relaxed font-medium">
+                {finalScore >= 95
+                  ? '神級大師！幾乎沒有失誤，完美呼吸轉移陣痛！'
+                  : finalScore >= 80
+                  ? '表現優良！能隨宮縮節拍及時調整呼吸深度！'
+                  : '順利通關！雖然稍有漏拍，依然成功平撫了焦慮！'}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
+
+      {/* Keyboard hotkey listener for Space bar */}
+      <KeyboardSpaceListener onSpace={handleDrumTap} />
     </div>
   );
+};
+
+const KeyboardSpaceListener: React.FC<{ onSpace: () => void }> = ({ onSpace }) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        onSpace();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onSpace]);
+
+  return null;
 };

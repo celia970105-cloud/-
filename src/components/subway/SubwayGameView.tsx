@@ -4,8 +4,19 @@ import confetti from 'canvas-confetti';
 import { SUBWAY_QUESTIONS } from '../../data/subwayQuestions';
 import { PlayerProfile, GamePhase } from '../../types/subwayGame';
 import { PregnantMomIllustration, CharacterMood } from './PregnantMomIllustration';
-import { playKawaiiCoin, playKawaiiOuch, playSuccessChime, playKawaiiPop } from '../../utils/audio';
-import { Sparkles, RotateCcw, Award, CheckCircle2, XCircle, AlertTriangle, Clock, ShieldAlert } from 'lucide-react';
+import {
+  playKawaiiCoin,
+  playKawaiiOuch,
+  playSuccessChime,
+  playKawaiiPop,
+  playSubwayStationChime,
+  playMetroDoorBeep,
+  playQuizCorrectChime,
+  playQuizWrongChime,
+  playGuanduStationBroadcast,
+  playGuanduArrivalBroadcast
+} from '../../utils/audio';
+import { Sparkles, RotateCcw, Award, CheckCircle2, XCircle, AlertTriangle, Clock, ShieldAlert, Volume2 } from 'lucide-react';
 
 interface SubwayGameViewProps {
   onSwitchToReport: () => void;
@@ -39,6 +50,7 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
   const [isAnswerCorrect, setIsAnswerCorrect] = useState(false);
   const [isTimeout, setIsTimeout] = useState(false);
   const [passengerBubble, setPassengerBubble] = useState<string | null>(null);
+  const [broadcastText, setBroadcastText] = useState<string>('下車時請注意間隙 · Mind the gap');
 
   // Countdown timer per question
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
@@ -91,7 +103,10 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
   }, [phase, currentQIndex, showExplanation]);
 
   const handleStartGame = () => {
-    playKawaiiPop();
+    playGuanduStationBroadcast((t) => setBroadcastText(t));
+    setTimeout(() => {
+      playMetroDoorBeep();
+    }, 2400);
     setPhase('playing');
     setCurrentQIndex(0);
     setCorrectCount(0);
@@ -116,7 +131,7 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
     setShowExplanation(true);
 
     if (isCorrect) {
-      playKawaiiCoin();
+      playQuizCorrectChime();
       setBalance(100);
       setTiltAngle(0);
       const nextCorrect = correctCount + 1;
@@ -128,6 +143,7 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
         }, 1200);
       }
     } else {
+      playQuizWrongChime();
       handleRecordMistake(false);
     }
   };
@@ -137,12 +153,12 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
     setIsTimeout(true);
     setIsAnswerCorrect(false);
     setShowExplanation(true);
+    playQuizWrongChime();
     handleRecordMistake(true);
   };
 
   // Helper to handle strike / fall accumulation
   const handleRecordMistake = (byTimeout: boolean) => {
-    playKawaiiOuch();
     setIsWobbling(true);
     setTiltAngle(Math.random() > 0.5 ? -35 : 35);
 
@@ -173,7 +189,10 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
 
   const handleTriggerWin = () => {
     setPhase('won');
-    playSuccessChime();
+    playGuanduArrivalBroadcast((t) => setBroadcastText(t));
+    setTimeout(() => {
+      playSuccessChime();
+    }, 2200);
     confetti({
       particleCount: 150,
       spread: 80,
@@ -253,33 +272,36 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
                   }`}
                 >
                   <div className="text-xl mb-1">💖</div>
-                  <div>愛心好孕章</div>
+                  <div>溫暖愛心章</div>
+                  <div className="text-[10px] text-pink-700 font-medium">經典好孕</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setProfile({ ...profile, badgeStyle: 'bear' })}
+                  onClick={() => setProfile({ ...profile, badgeStyle: 'dino_egg' })}
                   className={`p-3 rounded-xl border-2 text-center text-xs font-bold transition-all cursor-pointer ${
-                    profile.badgeStyle === 'bear'
-                      ? 'border-amber-500 bg-amber-100 text-amber-900 shadow-sm scale-102 font-black'
-                      : 'border-stone-200 bg-white text-stone-600 hover:bg-amber-50'
+                    profile.badgeStyle === 'dino_egg'
+                      ? 'border-emerald-500 bg-emerald-100 text-emerald-900 shadow-sm scale-102 font-black'
+                      : 'border-stone-200 bg-white text-stone-600 hover:bg-emerald-50'
                   }`}
                 >
-                  <div className="text-xl mb-1">🐻</div>
-                  <div>萌萌小熊章</div>
+                  <div className="text-xl mb-1">🦖</div>
+                  <div>恐龍蛋孵化中</div>
+                  <div className="text-[10px] text-emerald-700 font-medium">暴龍會踢肚！</div>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => setProfile({ ...profile, badgeStyle: 'star' })}
+                  onClick={() => setProfile({ ...profile, badgeStyle: 'watermelon' })}
                   className={`p-3 rounded-xl border-2 text-center text-xs font-bold transition-all cursor-pointer ${
-                    profile.badgeStyle === 'star'
-                      ? 'border-sky-500 bg-sky-100 text-sky-900 shadow-sm scale-102 font-black'
-                      : 'border-stone-200 bg-white text-stone-600 hover:bg-sky-50'
+                    profile.badgeStyle === 'watermelon'
+                      ? 'border-red-500 bg-red-100 text-red-900 shadow-sm scale-102 font-black'
+                      : 'border-stone-200 bg-white text-stone-600 hover:bg-red-50'
                   }`}
                 >
-                  <div className="text-xl mb-1">⭐</div>
-                  <div>閃亮星星章</div>
+                  <div className="text-xl mb-1">🍉</div>
+                  <div>偷藏大西瓜</div>
+                  <div className="text-[10px] text-red-700 font-medium">剛吞了西瓜！</div>
                 </button>
               </div>
             </div>
@@ -319,26 +341,89 @@ export const SubwayGameView: React.FC<SubwayGameViewProps> = ({
               </div>
             </div>
 
-            {/* Target Score Progress & Strikes */}
-            <div className="flex items-center gap-4 bg-sky-50 px-4 py-2 rounded-2xl border border-sky-200">
-              <div className="text-center">
-                <span className="text-[10px] text-stone-400 block font-bold">成功站穩題數</span>
-                <span className="text-lg font-black text-emerald-600 font-mono">
-                  {correctCount} / 5 題
-                </span>
-              </div>
-              <div className="h-8 w-px bg-sky-200" />
-              <div className="text-center">
-                <span className="text-[10px] text-stone-400 block font-bold">失衡警告 (滿2次跌倒)</span>
-                <span className={`text-lg font-black font-mono ${mistakeCount >= 1 ? 'text-red-600 animate-pulse' : 'text-stone-700'}`}>
-                  {mistakeCount} / 2 次
-                </span>
+            {/* Target Score Progress & Strikes & Station Broadcast Chime */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  playGuanduStationBroadcast((t) => setBroadcastText(t));
+                  setTimeout(() => playMetroDoorBeep(), 2400);
+                }}
+                className="px-3.5 py-2 bg-red-50 hover:bg-red-100 active:scale-95 text-red-950 rounded-2xl border-2 border-red-300 text-xs font-black flex items-center gap-1.5 transition-all shadow-xs cursor-pointer"
+                title="播放台北捷剪淡水信義線【關渡站】真實到站廣播"
+              >
+                <div className="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping" />
+                <Volume2 className="w-4 h-4 text-red-600" />
+                <span>R25 關渡站廣播</span>
+              </button>
+
+              <div className="flex items-center gap-4 bg-sky-50 px-4 py-2 rounded-2xl border border-sky-200">
+                <div className="text-center">
+                  <span className="text-[10px] text-stone-400 block font-bold">成功站穩題數</span>
+                  <span className="text-lg font-black text-emerald-600 font-mono">
+                    {correctCount} / 5 題
+                  </span>
+                </div>
+                <div className="h-8 w-px bg-sky-200" />
+                <div className="text-center">
+                  <span className="text-[10px] text-stone-400 block font-bold">失衡警告 (滿2次跌倒)</span>
+                  <span className={`text-lg font-black font-mono ${mistakeCount >= 1 ? 'text-red-600 animate-pulse' : 'text-stone-700'}`}>
+                    {mistakeCount} / 2 次
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
           {/* Interactive Subway Carriage Scene (Nobody gives seats) */}
           <div className="relative min-h-[300px] sm:min-h-[340px] bg-gradient-to-b from-sky-200 via-sky-100 to-amber-100 rounded-3xl border-3 border-sky-300 overflow-hidden shadow-inner flex flex-col justify-between p-4 select-none">
+            {/* Real Guandu Station Door LED Display (Directly matching the video) */}
+            <div className="w-full bg-stone-950 border-2 border-stone-700 rounded-2xl p-2.5 shadow-md mb-2 text-white font-mono">
+              {/* Route strip */}
+              <div className="flex items-center justify-between text-[10px] text-stone-400 pb-1 border-b border-stone-800">
+                <span className="text-red-500 font-bold">● 淡水信義線</span>
+                <span>淡水 ◀ 竹圍 ◀ <strong className="text-white bg-red-600 px-1 rounded">關渡 R25</strong> ◀ 忠義</span>
+                <span className="text-stone-500">往淡水方向</span>
+              </div>
+
+              {/* Main LED Matrix Screen */}
+              <div className="grid grid-cols-12 items-center gap-2 pt-1.5 pb-1">
+                <div className="col-span-3 text-left">
+                  <span className="inline-block bg-amber-500/20 border border-amber-500 text-amber-400 px-1.5 py-0.5 rounded text-[10px] font-black">
+                    往淡水 Tamsui
+                  </span>
+                </div>
+
+                <div className="col-span-6 text-center">
+                  <span className="text-emerald-400 text-base sm:text-lg font-black tracking-widest drop-shadow-[0_0_8px_rgba(52,211,153,0.9)]">
+                    關渡 Guandu · R25
+                  </span>
+                </div>
+
+                <div className="col-span-3 text-right">
+                  <span className="inline-flex items-center gap-1 bg-amber-500/20 border border-amber-500 text-amber-300 px-1.5 py-0.5 rounded text-[10px] font-black">
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping inline-block" />
+                    本側開門
+                  </span>
+                </div>
+              </div>
+
+              {/* Marquee Notice Bar (Real Taipei Metro Door Display) */}
+              <div className="pt-1 border-t border-stone-800/80 flex items-center justify-between text-[11px] text-amber-300 font-sans">
+                <div className="flex items-center gap-1.5 overflow-hidden">
+                  <span className="bg-amber-400 text-stone-950 px-1 rounded text-[9px] font-black shrink-0">
+                    播音
+                  </span>
+                  <span className="text-amber-200 font-bold truncate animate-pulse">
+                    {broadcastText || '下車時請注意間隙 · Mind the gap'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-stone-400 font-sans font-medium hidden sm:inline shrink-0 font-mono">
+                  淡水信義線 R25
+                </span>
+              </div>
+            </div>
+
             {/* Subway Windows with moving speed lines */}
             <div className="w-full flex justify-around opacity-60">
               <div className="w-24 h-14 bg-sky-300/60 rounded-xl border-2 border-sky-400 overflow-hidden relative">

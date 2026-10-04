@@ -17,7 +17,7 @@ export interface Passenger {
 
 export interface PlayerProfile {
   name: string;
-  badgeStyle: 'pink_heart' | 'bear' | 'star';
+  badgeStyle: 'pink_heart' | 'dino_egg' | 'watermelon';
   avatar: string;
 }
 

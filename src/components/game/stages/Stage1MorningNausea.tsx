@@ -1,17 +1,21 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'motion/react';
-import { playKawaiiCoin, playKawaiiOuch, playSuccessChime, playKawaiiPop } from '../../../utils/audio';
-import { Sparkles, RotateCcw, ArrowLeft, ArrowRight, Heart } from 'lucide-react';
-
-interface StageProps {
-  onComplete: (score: number) => void;
-  onUpdateStats: (energyDelta: number, fatigueDelta: number, empathyDelta: number) => void;
-}
+import { motion, AnimatePresence } from 'motion/react';
+import { StageProps } from '../../../types/pregnancy';
+import {
+  playKawaiiCoin,
+  playKawaiiOuch,
+  playSuccessChime,
+  playKawaiiPop,
+  playMorningSicknessGurgle,
+  startMorningAmbientHum,
+  stopMorningAmbientHum
+} from '../../../utils/audio';
+import { Sparkles, RotateCcw, Award, CheckCircle2, AlertTriangle, ArrowLeft, ArrowRight, Zap, Target } from 'lucide-react';
 
 interface FallingItem {
   id: number;
-  x: number; // 5 to 90%
-  y: number; // 0 to 100%
+  x: number; // percentage 10 to 90
+  y: number; // percentage 0 to 100
   emoji: string;
   name: string;
   isGood: boolean;
@@ -20,36 +24,59 @@ interface FallingItem {
 
 const GOOD_TEMPLATES = [
   { emoji: '🍪', name: '蘇打餅乾', isGood: true },
-  { emoji: '🍋', name: '檸檬水', isGood: true },
-  { emoji: '🍞', name: '乾吐司', isGood: true },
-  { emoji: '💊', name: '葉酸錠', isGood: true },
-  { emoji: '🍎', name: '甜蘋果片', isGood: true }
+  { emoji: '🍞', name: '無油乾吐司', isGood: true },
+  { emoji: '🍋', name: '酸甜檸檬水', isGood: true },
+  { emoji: '💊', name: '維生素B6錠', isGood: true },
+  { emoji: '🍎', name: '甜蘋果片', isGood: true },
+  { emoji: '🥣', name: '暖胃燕麥粥', isGood: true },
+  { emoji: '🍌', name: '補鉀熟香蕉', isGood: true },
+  { emoji: '🫚', name: '止吐生薑片', isGood: true },
+  { emoji: '🍵', name: '清香薄荷茶', isGood: true },
+  { emoji: '🧀', name: '高蛋白乳酪', isGood: true }
 ];
 
 const BAD_TEMPLATES = [
   { emoji: '🥓', name: '油炸培根', isGood: false },
   { emoji: '☕', name: '濃黑咖啡', isGood: false },
-  { emoji: '💨', name: '油煙嗆味', isGood: false },
-  { emoji: '🧄', name: '大蒜臭氣', isGood: false }
+  { emoji: '💨', name: '刺鼻油煙', isGood: false },
+  { emoji: '🧄', name: '爆炒生大蒜', isGood: false },
+  { emoji: '🌶️', name: '重辣麻辣鍋', isGood: false },
+  { emoji: '🍗', name: '酥脆炸雞排', isGood: false },
+  { emoji: '🧋', name: '甜膩波霸奶', isGood: false },
+  { emoji: '🦨', name: '濃郁臭豆腐', isGood: false }
 ];
 
 export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdateStats }) => {
   const [basketX, setBasketX] = useState(50); // 10 to 90%
-  const [nausea, setNausea] = useState(30);
-  const [caughtCount, setCaughtCount] = useState(0);
+  const [nausea, setNausea] = useState(25);
+  const [score, setScore] = useState(0); // 0 to 10 points
   const [fallingItems, setFallingItems] = useState<FallingItem[]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
   const [isWon, setIsWon] = useState(false);
   const [feedbackEffect, setFeedbackEffect] = useState<{ text: string; good: boolean } | null>(null);
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const scoreRef = useRef(0);
+  const nauseaRef = useRef(25);
 
-  // Spawn falling items
+  // Gentle morning ambient hum during gameplay
+  useEffect(() => {
+    if (!isGameOver && !isWon) {
+      startMorningAmbientHum();
+    } else {
+      stopMorningAmbientHum();
+    }
+    return () => {
+      stopMorningAmbientHum();
+    };
+  }, [isGameOver, isWon]);
+
+  // Spawn falling items at high speed (Every 600ms)
   useEffect(() => {
     if (isGameOver || isWon) return;
 
     const spawnInterval = setInterval(() => {
-      const isGood = Math.random() > 0.4;
+      const isGood = Math.random() > 0.42;
       const template = isGood
         ? GOOD_TEMPLATES[Math.floor(Math.random() * GOOD_TEMPLATES.length)]
         : BAD_TEMPLATES[Math.floor(Math.random() * BAD_TEMPLATES.length)];
@@ -61,11 +88,11 @@ export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdate
         emoji: template.emoji,
         name: template.name,
         isGood: template.isGood,
-        speed: Math.random() * 2 + 2.5
+        speed: Math.random() * 2.5 + 4.2
       };
 
       setFallingItems((prev) => [...prev, newItem]);
-    }, 1100);
+    }, 600);
 
     return () => clearInterval(spawnInterval);
   }, [isGameOver, isWon]);
@@ -75,40 +102,18 @@ export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdate
     if (isGameOver || isWon) return;
 
     const gameLoop = setInterval(() => {
+      const caughtThisFrame: FallingItem[] = [];
+
       setFallingItems((prev) => {
         const nextItems: FallingItem[] = [];
 
         for (const item of prev) {
           const nextY = item.y + item.speed;
 
-          // Check collision with basket (basket is around y: 82 to 92%)
+          // Check collision with basket
           if (nextY >= 80 && nextY <= 92 && Math.abs(item.x - basketX) < 14) {
-            // Collision caught!
-            if (item.isGood) {
-              playKawaiiCoin();
-              setCaughtCount((c) => {
-                const nextC = c + 1;
-                if (nextC >= 8) {
-                  triggerWin();
-                }
-                return nextC;
-              });
-              setNausea((n) => Math.max(0, n - 10));
-              setFeedbackEffect({ text: `+1 ${item.name} 胃好舒服~`, good: true });
-              onUpdateStats(8, -2, 5);
-            } else {
-              playKawaiiOuch();
-              setNausea((n) => {
-                const nextN = n + 22;
-                if (nextN >= 100) {
-                  setIsGameOver(true);
-                }
-                return nextN;
-              });
-              setFeedbackEffect({ text: `吃到 ${item.name} 嘔嘔嘔！`, good: false });
-              onUpdateStats(-5, 10, 2);
-            }
-            continue; // item consumed
+            caughtThisFrame.push(item);
+            continue; // consumed
           }
 
           if (nextY < 100) {
@@ -117,24 +122,53 @@ export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdate
         }
         return nextItems;
       });
+
+      // Process collision results safely outside state updater
+      for (const item of caughtThisFrame) {
+        if (item.isGood) {
+          playKawaiiCoin();
+          scoreRef.current += 1; // +1 point for good food
+          nauseaRef.current = Math.max(0, nauseaRef.current - 12);
+          setScore(scoreRef.current);
+          setNausea(nauseaRef.current);
+          setFeedbackEffect({ text: `+1分 ✨ ${item.name} 胃好舒服！`, good: true });
+          onUpdateStats(8, -2, 5);
+
+          // WIN CONDITION: 10 points!
+          if (scoreRef.current >= 10) {
+            setIsWon(true);
+            playSuccessChime();
+            onComplete(95);
+            break;
+          }
+        } else {
+          playKawaiiOuch();
+          playMorningSicknessGurgle();
+          scoreRef.current = Math.max(0, scoreRef.current - 1); // -1 point penalty for bad food!
+          nauseaRef.current = Math.min(100, nauseaRef.current + 26);
+          setScore(scoreRef.current);
+          setNausea(nauseaRef.current);
+          setFeedbackEffect({ text: `-1分 ❌ 吃到 ${item.name}！反胃扣分！`, good: false });
+          onUpdateStats(-5, 10, 2);
+
+          if (nauseaRef.current >= 100) {
+            setIsGameOver(true);
+            break;
+          }
+        }
+      }
     }, 50);
 
     return () => clearInterval(gameLoop);
-  }, [basketX, isGameOver, isWon]);
-
-  const triggerWin = () => {
-    setIsWon(true);
-    playSuccessChime();
-    onComplete(96);
-  };
+  }, [basketX, isGameOver, isWon, onComplete, onUpdateStats]);
 
   // Keyboard controls
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') {
-        setBasketX((x) => Math.max(12, x - 8));
+        setBasketX((x) => Math.max(10, x - 12));
       } else if (e.key === 'ArrowRight') {
-        setBasketX((x) => Math.min(88, x + 8));
+        setBasketX((x) => Math.min(90, x + 12));
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -142,9 +176,11 @@ export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdate
   }, []);
 
   const handleReset = () => {
+    scoreRef.current = 0;
+    nauseaRef.current = 25;
     setBasketX(50);
-    setNausea(30);
-    setCaughtCount(0);
+    setNausea(25);
+    setScore(0);
     setFallingItems([]);
     setIsGameOver(false);
     setIsWon(false);
@@ -153,64 +189,61 @@ export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdate
 
   return (
     <div className="space-y-4">
-      {/* Kawaii Cute Header */}
+      {/* Header */}
       <div className="bg-pink-50/80 border-2 border-pink-200 rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-2xl bg-white border-2 border-pink-300 flex items-center justify-center text-2xl shadow-xs shrink-0">
             🍪
           </div>
           <div>
-            <div className="inline-block bg-pink-200 text-pink-800 text-[11px] font-bold px-2 py-0.5 rounded-full mb-0.5">
-              STAGE 01 · 孕早期晨吐大作戰
+            <div className="flex items-center gap-1.5">
+              <span className="inline-block bg-pink-600 text-white text-[11px] font-black px-2.5 py-0.5 rounded-full shadow-xs">
+                STAGE 01 · 晨吐快手接接樂
+              </span>
+              <span className="inline-flex items-center gap-0.5 bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-xs">
+                🎯 滿 10 分過關 · 壞物扣 1 分
+              </span>
             </div>
-            <h3 className="text-lg font-bold text-stone-900 font-serif-tc">
-              清晨補給接接樂！避開油煙怪
-            </h3>
-            <p className="text-xs text-stone-500">
-              用方向鍵或按鈕移動媽咪，接住 8 樣清淡美食！千萬不要吃到油膩物喔！
-            </p>
+            <h2 className="text-lg font-black text-stone-900 font-serif-tc mt-0.5">
+              吃到 10 個好食物得 10 分過關，吃到壞的扣 1 分！
+            </h2>
           </div>
         </div>
 
-        {/* Meters */}
-        <div className="flex items-center gap-4 shrink-0 bg-white px-4 py-2 rounded-2xl border border-pink-200">
-          <div className="text-center">
-            <span className="text-[10px] text-stone-400 block font-bold">已收集補給</span>
-            <span className="text-lg font-black text-pink-600 font-mono">
-              {caughtCount} / 8
-            </span>
+        {/* Score & Nausea Bar */}
+        <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border border-pink-200 shadow-xs">
+          <div>
+            <span className="text-[10px] font-bold text-stone-400 block">反胃乾嘔度 (滿百失格)</span>
+            <div className="w-24 h-3 bg-stone-100 rounded-full overflow-hidden border border-stone-200 mt-0.5">
+              <div
+                className={`h-full transition-all ${
+                  nausea < 40 ? 'bg-emerald-400' : nausea < 75 ? 'bg-amber-400' : 'bg-red-500'
+                }`}
+                style={{ width: `${nausea}%` }}
+              />
+            </div>
           </div>
-          <div className="h-8 w-px bg-pink-100" />
-          <div className="text-center">
-            <span className="text-[10px] text-stone-400 block font-bold">反胃乾嘔條</span>
-            <span className={`text-lg font-black font-mono ${nausea > 70 ? 'text-red-500 animate-pulse' : 'text-stone-700'}`}>
-              {nausea}%
+          <div className="h-7 w-px bg-pink-200" />
+          <div className="text-center min-w-[70px]">
+            <span className="text-[10px] font-bold text-stone-400 block">當前得分</span>
+            <span className="text-base font-black text-pink-700 font-mono">
+              {score} / 10 分
             </span>
           </div>
         </div>
       </div>
 
-      {/* Arcade Playfield Canvas */}
+      {/* Main Game Screen */}
       <div
         ref={containerRef}
-        className="relative h-96 sm:h-[420px] bg-gradient-to-b from-sky-50 via-pink-50/40 to-amber-50/50 rounded-3xl border-3 border-pink-200 overflow-hidden shadow-inner select-none"
+        onMouseMove={(e) => {
+          if (!containerRef.current || isGameOver || isWon) return;
+          const rect = containerRef.current.getBoundingClientRect();
+          const percent = ((e.clientX - rect.left) / rect.width) * 100;
+          setBasketX(Math.max(10, Math.min(90, percent)));
+        }}
+        className="relative h-72 sm:h-80 bg-gradient-to-b from-sky-50 via-pink-50/50 to-amber-50/40 rounded-3xl border-3 border-pink-200 overflow-hidden shadow-inner cursor-ew-resize select-none"
       >
-        {/* Cute Clouds in background */}
-        <div className="absolute top-4 left-8 text-3xl opacity-40 animate-pulse">☁️</div>
-        <div className="absolute top-12 right-12 text-2xl opacity-40">✨</div>
-        <div className="absolute top-24 left-1/3 text-xl opacity-30">🌸</div>
-
-        {/* Floating pop text */}
-        {feedbackEffect && (
-          <div
-            className={`absolute top-16 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-xs font-bold shadow-md z-20 transition-all ${
-              feedbackEffect.good ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white animate-bounce'
-            }`}
-          >
-            {feedbackEffect.text}
-          </div>
-        )}
-
         {/* Falling items */}
         {fallingItems.map((item) => (
           <div
@@ -221,102 +254,108 @@ export const Stage1MorningNausea: React.FC<StageProps> = ({ onComplete, onUpdate
               transform: 'translate(-50%, -50%)'
             }}
             className={`absolute flex flex-col items-center pointer-events-none transition-transform ${
-              item.isGood ? 'scale-110 drop-shadow-md' : 'scale-105'
+              item.isGood ? 'scale-110 drop-shadow-xs' : 'scale-105 opacity-90'
             }`}
           >
             <span className="text-3xl sm:text-4xl animate-bounce">{item.emoji}</span>
-            <span className={`text-[10px] font-bold px-1.5 rounded-full mt-0.5 ${
-              item.isGood ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
-            }`}>
+            <span
+              className={`text-[10px] font-black px-1.5 rounded-full ${
+                item.isGood ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
+              }`}
+            >
               {item.name}
             </span>
           </div>
         ))}
 
-        {/* Player: Cute Mom Character with cute tummy & basket */}
+        {/* Floating feedback toast */}
+        <AnimatePresence>
+          {feedbackEffect && (
+            <motion.div
+              initial={{ opacity: 0, y: -10, scale: 0.8 }}
+              animate={{ opacity: 1, y: -25, scale: 1 }}
+              exit={{ opacity: 0 }}
+              style={{ left: `${basketX}%`, top: '70%' }}
+              className={`absolute -translate-x-1/2 px-3 py-1 rounded-full text-xs font-black shadow-md z-30 pointer-events-none ${
+                feedbackEffect.good
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-rose-600 text-white'
+              }`}
+            >
+              {feedbackEffect.text}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Player Plate / Basket */}
         <div
           style={{
             left: `${basketX}%`,
-            bottom: '16px',
-            transform: 'translateX(-50%)'
+            top: '84%',
+            transform: 'translate(-50%, -50%)'
           }}
-          className="absolute z-10 flex flex-col items-center transition-all duration-75"
+          className="absolute flex flex-col items-center transition-all duration-75 z-20 pointer-events-none"
         >
-          {/* Cute prompt bubble */}
-          <div className="bg-white/90 border border-pink-300 text-[10px] text-pink-700 font-bold px-2 py-0.5 rounded-full shadow-xs mb-1">
-            🤰 媽咪肚子好餓~
+          <div className="w-20 sm:w-24 h-7 bg-white rounded-full border-3 border-pink-400 shadow-md flex items-center justify-center gap-1">
+            <span className="text-sm">🥣</span>
+            <span className="text-[10px] font-black text-pink-700">護胃盤</span>
           </div>
-
-          <div className="relative">
-            {/* Cute mom emoji / avatar */}
-            <div className="w-16 h-16 rounded-full bg-pink-100 border-2 border-pink-300 flex items-center justify-center text-3xl shadow-md">
-              {nausea > 70 ? '🤢' : isWon ? '🥰' : '🤰'}
-            </div>
-            {/* Basket Tray */}
-            <div className="absolute -bottom-1 -left-3 -right-3 h-5 bg-amber-400 border border-amber-500 rounded-full flex items-center justify-center text-[10px] text-amber-950 font-bold shadow-xs">
-              🧺 餐盤
-            </div>
+          <div className="text-[10px] font-bold text-stone-500 mt-1 bg-white/80 px-2 rounded-full border border-pink-100">
+            左右移動 / 方向鍵
           </div>
         </div>
 
         {/* Game Over Screen */}
         {isGameOver && (
-          <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center z-30">
-            <div className="text-5xl mb-2">😵‍💫</div>
-            <h4 className="text-xl font-bold text-white mb-1">晨吐指數破表啦！</h4>
-            <p className="text-xs text-pink-200 mb-4">吃到了太多油膩地雷，肚子開始劇烈翻滾！再試一次吧！</p>
-            <button
-              onClick={handleReset}
-              className="px-5 py-2.5 bg-pink-500 hover:bg-pink-600 text-white rounded-full font-bold text-sm shadow-lg flex items-center gap-2 cursor-pointer"
-            >
-              <RotateCcw className="w-4 h-4" />
-              <span>重新挑戰</span>
-            </button>
+          <div className="absolute inset-0 bg-stone-900/60 backdrop-blur-xs flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-xl border-2 border-rose-300">
+              <div className="text-5xl">😵‍💫</div>
+              <h3 className="text-xl font-black text-stone-900 font-serif-tc">
+                反胃值破表！吐得全身無力...
+              </h3>
+              <p className="text-xs text-stone-600 leading-relaxed font-medium">
+                吃到了油炸、辛辣或刺鼻氣味，得分倒扣且胃酸逆流！
+              </p>
+              <button
+                onClick={handleReset}
+                className="w-full py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-xs shadow-md transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <RotateCcw className="w-4 h-4" />
+                <span>重新挑戰 10 分！</span>
+              </button>
+            </div>
           </div>
         )}
 
         {/* Win Screen */}
         {isWon && (
-          <div className="absolute inset-0 bg-pink-500/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 text-center z-30 animate-in fade-in">
-            <div className="text-6xl mb-2 animate-bounce">🎉</div>
-            <h4 className="text-2xl font-bold text-white mb-1">太棒啦！止吐成功！</h4>
-            <p className="text-xs text-white/90 mb-4">
-              成功吃到 8 份健康補給，晨間元氣滿滿，寶寶在肚子裡開心地翻跟斗！
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={handleReset}
-                className="px-4 py-2 bg-white/20 text-white rounded-full text-xs font-bold hover:bg-white/30 cursor-pointer"
-              >
-                再玩一次
-              </button>
+          <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-xs flex items-center justify-center p-4 z-40 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center space-y-4 shadow-xl border-2 border-emerald-300">
+              <div className="text-5xl">✨🎉✨</div>
+              <h3 className="text-xl font-black text-stone-900 font-serif-tc">
+                恭喜滿 10 分！晨吐大獲全勝！
+              </h3>
+              <p className="text-xs text-stone-600 leading-relaxed font-medium">
+                太精準了！成功避開油煙油炸，接滿 10 個良食達到 10 分完美通關！
+              </p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Touch / Click Controls for easy playing on screen */}
-      <div className="flex items-center justify-between gap-4 p-3 bg-white rounded-2xl border border-pink-200">
+      {/* Mobile touch helper buttons */}
+      <div className="sm:hidden flex gap-2">
         <button
-          onClick={() => {
-            playKawaiiPop();
-            setBasketX((x) => Math.max(12, x - 12));
-          }}
-          className="flex-1 py-3 bg-pink-100 hover:bg-pink-200 active:scale-95 text-pink-800 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+          onClick={() => setBasketX((x) => Math.max(10, x - 15))}
+          className="flex-1 py-3 bg-pink-100 active:bg-pink-200 rounded-2xl font-black text-xs text-pink-900 flex items-center justify-center gap-1"
         >
-          <ArrowLeft className="w-4 h-4" />
-          <span>向左移動</span>
+          <ArrowLeft className="w-4 h-4" /> 向左移動
         </button>
-
         <button
-          onClick={() => {
-            playKawaiiPop();
-            setBasketX((x) => Math.min(88, x + 12));
-          }}
-          className="flex-1 py-3 bg-pink-100 hover:bg-pink-200 active:scale-95 text-pink-800 rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-xs"
+          onClick={() => setBasketX((x) => Math.min(90, x + 15))}
+          className="flex-1 py-3 bg-pink-100 active:bg-pink-200 rounded-2xl font-black text-xs text-pink-900 flex items-center justify-center gap-1"
         >
-          <span>向右移動</span>
-          <ArrowRight className="w-4 h-4" />
+          向右移動 <ArrowRight className="w-4 h-4" />
         </button>
       </div>
     </div>

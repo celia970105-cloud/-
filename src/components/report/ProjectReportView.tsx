@@ -29,10 +29,10 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ onPrint, o
 
   const [isEditing, setIsEditing] = useState(false);
 
-  // Cue slides for the presentation
+  // Cue slides for the presentation (no hardcoded page numbers)
   const presentationSlides = [
     {
-      title: '01. 專題動機 & 裝備設定',
+      title: '專題動機 & 裝備設定',
       subtitle: '（演講提綱：介紹為什麼要做這個體驗、穿戴了什麼規格）',
       points: [
         `🎒 模擬負重：${studentData.weightUsedKg} kg 水袋背包（相當於懷孕 32~34 週）`,
@@ -42,17 +42,17 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ onPrint, o
       ]
     },
     {
-      title: '02. 日常挑戰四大障礙',
-      subtitle: '（演講提綱：搭配小遊戲心得，分享最辛苦的四個時刻）',
+      title: '實測核心體驗（晨吐、捷運、拉梅茲）',
+      subtitle: '（演講提綱：搭配精選遊戲與實測短片，分享最具挑戰的情境）',
       points: [
-        '🍪 晨起乾嘔：空腹時胃酸翻騰，聞到油煙立刻反胃，需吃蘇打餅乾與深呼吸調息',
-        '👟 彎腰卡肚：直接彎腰會壓迫腹部且腰椎劇痛，必須採取「扶物直背深蹲法」',
-        '🚇 捷運通勤：列車晃動拉扯腰椎，外表看不出孕肚時很難啟齒，好孕胸章超重要',
-        '🌙 深夜好眠：不能平躺（會壓迫大血管胸悶！），需左側臥並搭配 3 顆月亮枕'
+        '🍪 晨起乾嘔（孕早期）：空腹時胃酸翻騰，油煙刺激神經，靠蘇打餅乾與維生素B6調理',
+        '🚇 捷運晃動（通勤期）：列車顛簸且無人讓座，重心嚴重前傾，需靠護理防跌技巧支撐',
+        '🥁 拉梅茲呼吸（生產期）：陣痛來臨需高度專注，透過淺快呼吸與神經轉移法減輕宮縮痛',
+        '💡 精華濃縮：專注最具代表性的核心情境，完美契合 8 分鐘上台報告節奏'
       ]
     },
     {
-      title: '03. 數據與生理代價',
+      title: '數據與生理代價',
       subtitle: '（演講提綱：分享孕婦身體承受的科學數據）',
       points: [
         '❤️ 心臟血容量：增加 40% ~ 50%（等於一顆心臟要供氧給兩個人！）',
@@ -62,7 +62,7 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ onPrint, o
       ]
     },
     {
-      title: '04. 同理心收穫 & 友善建言',
+      title: '同理心收穫 & 友善建言',
       subtitle: '（演講提綱：結尾總結與給學校/社會的建議）',
       points: [
         `💖 組員反思：${studentData.summaryReflection}`,
@@ -178,10 +178,10 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ onPrint, o
         <div className="bg-white rounded-3xl border-3 border-pink-200 p-8 sm:p-12 shadow-md space-y-6">
           <div className="flex items-center justify-between pb-4 border-b border-pink-100">
             <div>
-              <span className="text-xs text-pink-600 font-bold tracking-wider">
-                上台簡報卡片 · 第 {currentSlide + 1} / {presentationSlides.length} 頁
+              <span className="text-xs text-pink-600 font-black tracking-wider bg-pink-50 px-2.5 py-0.5 rounded-full border border-pink-200">
+                上台簡報提綱小卡
               </span>
-              <h2 className="text-2xl font-black text-stone-900 font-serif-tc mt-1">
+              <h2 className="text-2xl font-black text-stone-900 font-serif-tc mt-1.5">
                 {presentationSlides[currentSlide].title}
               </h2>
               <p className="text-xs text-pink-700 font-medium mt-0.5">
@@ -195,14 +195,14 @@ export const ProjectReportView: React.FC<ProjectReportViewProps> = ({ onPrint, o
                 onClick={() => setCurrentSlide((s) => Math.max(0, s - 1))}
                 className="px-3.5 py-2 text-xs font-bold rounded-xl border border-stone-200 disabled:opacity-30 cursor-pointer"
               >
-                ◀ 上一頁
+                ◀ 上一主題
               </button>
               <button
                 disabled={currentSlide === presentationSlides.length - 1}
                 onClick={() => setCurrentSlide((s) => Math.min(presentationSlides.length - 1, s + 1))}
                 className="px-3.5 py-2 text-xs font-bold rounded-xl bg-pink-600 text-white disabled:opacity-30 cursor-pointer"
               >
-                下一頁 ▶
+                下一主題 ▶
               </button>
             </div>
           </div>
