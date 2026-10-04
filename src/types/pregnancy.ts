@@ -1,4 +1,4 @@
-export type NavigationTab = 'subway' | 'video' | 'game' | 'report' | 'certificate';
+export type NavigationTab = 'subway' | 'video' | 'game';
 
 export interface StageProps {
   onComplete: (score: number) => void;

@@ -2,28 +2,95 @@ import React from 'react';
 import { motion } from 'motion/react';
 
 export type CharacterMood = 'idle' | 'correct' | 'wrong' | 'seated';
+export type MomStance = 'unheld' | 'holding' | 'seated' | 'flying';
 
 interface PregnantMomIllustrationProps {
   mood: CharacterMood;
   name: string;
   badgeStyle: 'pink_heart' | 'dino_egg' | 'watermelon';
   tiltAngle: number;
+  stance?: MomStance;
+  compact?: boolean;
 }
 
 export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = ({
   mood,
   name,
   badgeStyle,
-  tiltAngle
+  tiltAngle,
+  stance = 'unheld',
+  compact = false
 }) => {
   const isWrong = mood === 'wrong';
   const isCorrect = mood === 'correct';
-  const isSeated = mood === 'seated';
+  const isSeated = stance === 'seated' || mood === 'seated';
+  const isHolding = stance === 'holding';
+  const isFlying = stance === 'flying';
+  const isUnheld = stance === 'unheld' && !isSeated && !isFlying;
+
+  if (isFlying) {
+    return (
+      <motion.div
+        animate={{
+          x: [0, -30, 480],
+          y: [0, -80, -420],
+          rotate: [0, 45, 1080],
+          scale: [1, 1.25, 0.15],
+          opacity: [1, 1, 0]
+        }}
+        transition={{
+          duration: 1.2,
+          ease: [0.25, 0.1, 0.25, 1]
+        }}
+        className="relative flex flex-col items-center select-none z-50 pointer-events-none"
+      >
+        <div className={`absolute ${compact ? '-top-8 text-[10px] px-2.5 py-0.5' : '-top-14 text-xs px-4 py-1.5'} z-30 flex items-center gap-1 bg-red-600 text-white font-black rounded-full shadow-2xl border-2 border-white animate-pulse whitespace-nowrap`}>
+          <span>🚀 啊！急煞～媽咪飛出去啦！</span>
+        </div>
+        <div className={`${compact ? 'text-2xl -bottom-4' : 'text-4xl -bottom-6'} absolute animate-ping`}>
+          💨💥💨
+        </div>
+        <svg
+          viewBox="0 0 160 210"
+          className={`${compact ? 'w-20 h-28' : 'w-32 h-44 sm:w-36 sm:h-48'} drop-shadow-2xl overflow-visible`}
+        >
+          <defs>
+            <linearGradient id="hairGradFly" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#7C4A2D" />
+              <stop offset="100%" stopColor="#532E18" />
+            </linearGradient>
+            <linearGradient id="skinGradFly" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#FFF2E8" />
+              <stop offset="100%" stopColor="#FFE0CE" />
+            </linearGradient>
+            <linearGradient id="dressGradFly" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#FFB3C6" />
+              <stop offset="100%" stopColor="#FB6F92" />
+            </linearGradient>
+          </defs>
+          <ellipse cx="80" cy="40" rx="36" ry="34" fill="url(#hairGradFly)" />
+          <ellipse cx="80" cy="50" rx="28" ry="26" fill="url(#skinGradFly)" />
+          {/* Dizzy fly eyes */}
+          <path d="M 62 48 L 72 52 L 62 56" stroke="#4A2511" strokeWidth="3" fill="none" />
+          <path d="M 98 48 L 88 52 L 98 56" stroke="#4A2511" strokeWidth="3" fill="none" />
+          <ellipse cx="80" cy="62" rx="7" ry="5" fill="#532E18" />
+          {/* Dress */}
+          <ellipse cx="80" cy="126" rx="38" ry="36" fill="url(#dressGradFly)" />
+          {/* Flailing arms */}
+          <path d="M 58 90 L 20 60" stroke="#FFE0CE" strokeWidth="8" strokeLinecap="round" />
+          <path d="M 102 90 L 140 60" stroke="#FFE0CE" strokeWidth="8" strokeLinecap="round" />
+          {/* Flailing legs */}
+          <path d="M 66 156 L 45 195" stroke="#FFE0CE" strokeWidth="8" strokeLinecap="round" />
+          <path d="M 94 156 L 115 195" stroke="#FFE0CE" strokeWidth="8" strokeLinecap="round" />
+        </svg>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
       animate={{
-        rotate: tiltAngle,
+        rotate: isHolding ? tiltAngle * 0.3 : tiltAngle,
         x: isWrong ? [-6, 6, -8, 8, -4, 4, 0] : 0,
         y: isWrong ? [0, 4, -4, 2, 0] : isCorrect ? [0, -6, 0] : 0
       }}
@@ -39,9 +106,39 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
         <motion.div
           initial={{ opacity: 0, scale: 0.5, y: 10 }}
           animate={{ opacity: 1, scale: 1.1, y: 0 }}
-          className="absolute -top-12 z-30 flex items-center gap-1 bg-rose-600 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-white animate-bounce"
+          className={`absolute ${compact ? '-top-8 text-[9px] px-2 py-0.5' : '-top-12 text-[11px] px-3 py-1'} z-30 flex items-center gap-1 bg-rose-600 text-white font-black rounded-full shadow-lg border-2 border-white animate-bounce whitespace-nowrap`}
         >
-          <span>😵 晃晃！站不穩啦！</span>
+          <span>😵 重心失衡！</span>
+        </motion.div>
+      )}
+
+      {isSeated && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.5, y: 10 }}
+          animate={{ opacity: 1, scale: 1.1, y: 0 }}
+          className={`absolute ${compact ? '-top-8 text-[9px] px-2 py-0.5' : '-top-14 text-[11px] px-3.5 py-1.5'} z-30 flex items-center gap-1 bg-pink-600 text-white font-black rounded-full shadow-lg border-2 border-white animate-bounce whitespace-nowrap`}
+        >
+          <span>💖 有人讓座，安心就座！</span>
+        </motion.div>
+      )}
+
+      {isHolding && !isSeated && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={`absolute ${compact ? '-top-8 text-[9px] px-2 py-0.5' : '-top-12 text-[11px] px-3 py-1'} z-30 flex items-center gap-1 bg-amber-500 text-white font-black rounded-full shadow-lg border-2 border-white whitespace-nowrap`}
+        >
+          <span>💪 穩固抓好扶手！</span>
+        </motion.div>
+      )}
+
+      {isUnheld && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className={`absolute ${compact ? '-top-7 text-[8px] px-2 py-0.5' : '-top-12 text-[10px] px-2.5 py-0.5'} z-30 flex items-center gap-1 bg-amber-100 text-amber-800 font-black rounded-full shadow-xs border border-amber-300 whitespace-nowrap`}
+        >
+          <span>⚠️ 尚未抓好扶手</span>
         </motion.div>
       )}
 
@@ -49,9 +146,9 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
         <motion.div
           initial={{ opacity: 0, scale: 0.5, y: 10 }}
           animate={{ opacity: 1, scale: 1.1, y: 0 }}
-          className="absolute -top-12 z-30 flex items-center gap-1 bg-emerald-600 text-white text-[11px] font-black px-3 py-1 rounded-full shadow-lg border-2 border-white animate-bounce"
+          className={`absolute ${compact ? '-top-8 text-[9px] px-2 py-0.5' : '-top-12 text-[11px] px-3 py-1'} z-30 flex items-center gap-1 bg-emerald-600 text-white font-black rounded-full shadow-lg border-2 border-white animate-bounce`}
         >
-          <span>✨ 呼~ 站穩微笑！</span>
+          <span>✨ 站穩微笑！</span>
         </motion.div>
       )}
 
@@ -61,14 +158,14 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
           <motion.div
             animate={{ y: [-5, 10], opacity: [1, 0] }}
             transition={{ repeat: Infinity, duration: 0.6 }}
-            className="absolute -top-3 -right-2 text-xl z-20 pointer-events-none"
+            className={`absolute ${compact ? '-top-2 -right-1 text-sm' : '-top-3 -right-2 text-xl'} z-20 pointer-events-none`}
           >
             💦
           </motion.div>
           <motion.div
             animate={{ y: [-5, 12], opacity: [1, 0] }}
             transition={{ repeat: Infinity, duration: 0.7, delay: 0.2 }}
-            className="absolute -top-1 -left-3 text-lg z-20 pointer-events-none"
+            className={`absolute ${compact ? '-top-1 -left-2 text-xs' : '-top-1 -left-3 text-lg'} z-20 pointer-events-none`}
           >
             💧
           </motion.div>
@@ -81,32 +178,38 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
           <motion.div
             animate={{ scale: [0.8, 1.2, 0.8], rotate: [0, 90, 180] }}
             transition={{ repeat: Infinity, duration: 1.2 }}
-            className="absolute -top-4 -right-4 text-xl z-20 pointer-events-none"
+            className={`absolute ${compact ? '-top-3 -right-2 text-sm' : '-top-4 -right-4 text-xl'} z-20 pointer-events-none`}
           >
             💖
           </motion.div>
           <motion.div
             animate={{ scale: [1, 1.3, 1] }}
             transition={{ repeat: Infinity, duration: 1 }}
-            className="absolute -top-2 -left-4 text-lg z-20 pointer-events-none"
+            className={`absolute ${compact ? '-top-1 -left-2 text-xs' : '-top-2 -left-4 text-lg'} z-20 pointer-events-none`}
           >
             ✨
           </motion.div>
         </>
       )}
 
-      {/* Hanging subway strap hand when standing */}
+      {/* Hanging subway strap when standing */}
       {!isSeated && (
-        <div className="absolute -top-14 left-1/2 -translate-x-1/2 w-6 flex flex-col items-center pointer-events-none z-0">
-          <div className="w-1.5 h-10 bg-stone-700 rounded-b-sm" />
-          <div className="w-6 h-6 rounded-full border-3 border-amber-400 bg-amber-100/30" />
+        <div className={`absolute ${compact ? '-top-9 w-6' : '-top-14 w-8'} left-1/2 -translate-x-1/2 flex flex-col items-center pointer-events-none z-0`}>
+          <div className={`${compact ? 'w-1 h-6' : 'w-1.5 h-10'} rounded-b-sm ${isHolding ? 'bg-amber-600' : 'bg-stone-700'}`} />
+          <div
+            className={`${compact ? 'w-5 h-5 border-2' : 'w-7 h-7 border-3'} rounded-full transition-all ${
+              isHolding
+                ? 'border-amber-400 bg-amber-300 shadow-[0_0_15px_rgba(251,191,36,0.9)] scale-110'
+                : 'border-amber-400/80 bg-amber-100/30'
+            }`}
+          />
         </div>
       )}
 
       {/* SVG Character Vector Illustration */}
       <svg
         viewBox="0 0 160 210"
-        className="w-32 h-44 sm:w-36 sm:h-48 drop-shadow-md overflow-visible"
+        className={`${compact ? 'w-22 h-30 sm:w-26 sm:h-36' : 'w-32 h-44 sm:w-36 sm:h-48'} drop-shadow-md overflow-visible`}
       >
         <defs>
           {/* Gradients */}
@@ -121,22 +224,22 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
           </linearGradient>
 
           <linearGradient id="dressGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#FFB3C6" />
-            <stop offset="60%" stopColor="#FF8FAB" />
-            <stop offset="100%" stopColor="#FB6F92" />
+            <stop offset="0%" stopColor="#FFE0E6" />
+            <stop offset="50%" stopColor="#FFBCBD" />
+            <stop offset="100%" stopColor="#E85D75" />
           </linearGradient>
 
           <linearGradient id="apronGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#FFFFFF" />
-            <stop offset="100%" stopColor="#FFF0F5" />
+            <stop offset="0%" stopColor="#FFFCF4" />
+            <stop offset="100%" stopColor="#FFE0E6" />
           </linearGradient>
         </defs>
 
         {/* Back Hair Bun / Ponytail */}
         <ellipse cx="80" cy="40" rx="36" ry="34" fill="url(#hairGrad)" />
         <ellipse cx="112" cy="38" rx="14" ry="14" fill="url(#hairGrad)" />
-        {/* Pink hair ribbon scrunchie */}
-        <circle cx="106" cy="38" r="6" fill="#FB6F92" />
+        {/* Strawberry hair ribbon scrunchie */}
+        <circle cx="106" cy="38" r="6" fill="#E85D75" />
 
         {/* Neck */}
         <rect x="74" y="66" width="12" height="12" rx="4" fill="url(#skinGrad)" />
@@ -322,16 +425,25 @@ export const PregnantMomIllustration: React.FC<PregnantMomIllustrationProps> = (
             <path d="M 62 86 Q 40 100 32 114" stroke="#FFE0CE" strokeWidth="6" strokeLinecap="round" fill="none" />
             <circle cx="32" cy="114" r="4.5" fill="#FFE0CE" />
           </g>
-        ) : (
-          /* Standing / Normal / Correct: Right arm gracefully holding the strap overhead, Left arm supporting belly */
+        ) : isHolding ? (
+          /* Firmly holding strap overhead with power & confidence! */
           <g>
-            {/* Right arm holding strap overhead */}
-            <path d="M 96 82 Q 104 40 85 8" stroke="#FFE0CE" strokeWidth="6.5" strokeLinecap="round" fill="none" />
-            <circle cx="85" cy="8" r="4.5" fill="#FFE0CE" />
-
-            {/* Left arm gently supporting lower belly */}
-            <path d="M 62 86 C 54 104, 62 128, 72 134" stroke="#FFE0CE" strokeWidth="6" strokeLinecap="round" fill="none" />
-            <circle cx="72" cy="134" r="4" fill="#FFE0CE" />
+            {/* Right arm firmly gripping strap ring */}
+            <path d="M 96 82 Q 104 36 84 8" stroke="#FFE0CE" strokeWidth="7.5" strokeLinecap="round" fill="none" />
+            <circle cx="84" cy="8" r="5.5" fill="#FFE0CE" />
+            {/* Left arm supporting belly */}
+            <path d="M 62 86 C 54 104, 62 128, 72 134" stroke="#FFE0CE" strokeWidth="6.5" strokeLinecap="round" fill="none" />
+            <circle cx="72" cy="134" r="4.5" fill="#FFE0CE" />
+          </g>
+        ) : (
+          /* Unheld: Hands both desperately trying to hug belly for balance, not holding strap! */
+          <g>
+            {/* Right arm hugging upper belly */}
+            <path d="M 98 86 C 96 102, 92 114, 84 120" stroke="#FFE0CE" strokeWidth="6" strokeLinecap="round" fill="none" />
+            <circle cx="84" cy="120" r="4.5" fill="#FFE0CE" />
+            {/* Left arm supporting lower belly */}
+            <path d="M 62 86 C 58 104, 66 126, 74 130" stroke="#FFE0CE" strokeWidth="6" strokeLinecap="round" fill="none" />
+            <circle cx="74" cy="130" r="4.5" fill="#FFE0CE" />
           </g>
         )}
 

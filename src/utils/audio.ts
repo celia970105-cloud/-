@@ -132,83 +132,22 @@ export function playMetroDoorBeep() {
   });
 }
 
-// Authentic Guandu Station Broadcast (真實關渡站到站廣播：依台北捷運真實順序 國語、英語、台語、客語與注意間隙)
+// Broadcast callbacks without synthetic voices
 export function playGuanduStationBroadcast(onTextUpdate?: (text: string) => void) {
-  playSubwayStationChime();
-
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-      setTimeout(() => {
-        // 1. 國語：關渡。下車時請注意間隙。
-        const u1 = new SpeechSynthesisUtterance('關渡。下車時請注意間隙。');
-        u1.lang = 'zh-TW';
-        u1.rate = 0.95;
-        u1.pitch = 1.05;
-        if (onTextUpdate) onTextUpdate('國語：關渡。下車時請注意間隙。');
-
-        // 2. English: Guandu Station. Mind the gap.
-        const u2 = new SpeechSynthesisUtterance('Guandu Station. Mind the gap.');
-        u2.lang = 'en-US';
-        u2.rate = 0.9;
-        u2.pitch = 0.98;
-
-        // 3. 台語：關渡。落車的時陣請注意空隙。
-        const u3 = new SpeechSynthesisUtterance('關渡，落車的時陣請注意空隙。');
-        u3.lang = 'zh-TW';
-        u3.rate = 0.92;
-
-        u1.onend = () => {
-          if (onTextUpdate) onTextUpdate('English: Guandu Station. Mind the gap.');
-          try {
-            window.speechSynthesis.speak(u2);
-          } catch {
-            // continue
-          }
-        };
-
-        u2.onend = () => {
-          if (onTextUpdate) onTextUpdate('台語：關渡，落車的時陣請注意空隙。');
-          try {
-            window.speechSynthesis.speak(u3);
-          } catch {
-            // continue
-          }
-        };
-
-        u3.onend = () => {
-          if (onTextUpdate) onTextUpdate('客語：關渡，下車个時節請注意縫仔。');
-          setTimeout(() => {
-            if (onTextUpdate) onTextUpdate('');
-          }, 3000);
-        };
-
-        window.speechSynthesis.speak(u1);
-      }, 750);
-    } catch {
-      // speech synthesis fallback
-    }
+  // Pure visual marquee updater - zero synthetic voice added
+  if (onTextUpdate) {
+    onTextUpdate('國語：關渡。下車時請注意間隙。');
+    setTimeout(() => onTextUpdate('English: Guandu Station. Mind the gap.'), 5000);
+    setTimeout(() => onTextUpdate('台語：關渡，落車的時陣請注意空隙。'), 9000);
+    setTimeout(() => onTextUpdate('客語：關渡，下車个時節請注意縫仔。'), 13000);
+    setTimeout(() => onTextUpdate('右側開門 · 下車時請注意間隙'), 17000);
   }
 }
 
-// Authentic Guandu Station Arrival Broadcast (抵達關渡站廣播)
+// Authentic Guandu Station Arrival Broadcast
 export function playGuanduArrivalBroadcast(onTextUpdate?: (text: string) => void) {
-  playSubwayStationChime();
-
-  if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-    try {
-      window.speechSynthesis.cancel();
-      setTimeout(() => {
-        const u = new SpeechSynthesisUtterance('關渡到了，關渡到了。本側開門，下車時請注意間隙。Guandu Station.');
-        u.lang = 'zh-TW';
-        u.rate = 0.92;
-        u.pitch = 1.02;
-        if (onTextUpdate) onTextUpdate('📢 關渡到了，本側開門。下車時請注意間隙。');
-        window.speechSynthesis.speak(u);
-      }, 750);
-    } catch {
-      // speech synthesis fallback
-    }
+  if (onTextUpdate) {
+    onTextUpdate('📢 關渡到了，右側開門。下車時請注意間隙。');
   }
 }
 

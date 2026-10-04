@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { GameState } from '../../types/pregnancy';
 import { Stage1MorningNausea } from './stages/Stage1MorningNausea';
 import { Stage5LamazeBreathing } from './stages/Stage5LamazeBreathing';
-import { Sparkles, Trophy, ArrowRight, CheckCircle2, Heart, Award, Zap } from 'lucide-react';
+import { Sparkles, Trophy, ArrowRight, CheckCircle2, Heart, TrainFront, Zap } from 'lucide-react';
 import { playSuccessChime, playKawaiiPop } from '../../utils/audio';
 
 interface DailyChallengeGameProps {
-  onSwitchToReport: () => void;
-  onSwitchToCertificate: () => void;
+  onBackToSubway: () => void;
 }
 
 const STAGES = [
@@ -16,8 +15,7 @@ const STAGES = [
 ];
 
 export const DailyChallengeGame: React.FC<DailyChallengeGameProps> = ({
-  onSwitchToReport,
-  onSwitchToCertificate
+  onBackToSubway
 }) => {
   const [gameState, setGameState] = useState<GameState>({
     currentStage: 1,
@@ -111,10 +109,10 @@ export const DailyChallengeGame: React.FC<DailyChallengeGameProps> = ({
                 {gameState.completedStages.length} / 2 關完成
               </div>
               <button
-                onClick={onSwitchToReport}
-                className="w-full py-2 bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-black rounded-xl transition-all cursor-pointer"
+                onClick={onBackToSubway}
+                className="w-full py-2 bg-pink-100 hover:bg-pink-200 text-pink-800 text-xs font-black rounded-xl transition-all cursor-pointer"
               >
-                切換至演講提綱小卡 ▶
+                ← 返回捷運答題大冒險
               </button>
             </div>
           </div>
@@ -220,12 +218,12 @@ export const DailyChallengeGame: React.FC<DailyChallengeGameProps> = ({
                   <button
                     onClick={() => {
                       setShowStageSuccessModal(false);
-                      onSwitchToCertificate();
+                      onBackToSubway();
                     }}
                     className="w-full py-3 bg-pink-600 hover:bg-pink-700 text-white rounded-xl text-xs font-black shadow-md cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <Award className="w-4 h-4" />
-                    <span>領取同理心結業證書</span>
+                    <TrainFront className="w-4 h-4" />
+                    <span>返回捷運答題大冒險</span>
                   </button>
                 </div>
               )}
